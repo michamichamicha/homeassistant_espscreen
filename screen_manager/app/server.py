@@ -658,7 +658,7 @@ class Manager:
         screen is offline, or the entity is disabled); their value is None, not a default that could differ
         from what the screen has."""
         inbox = self.aliases.get(screen['id'], screen['id'])
-        keys = [key for key in SETTING_RULES if key != 'show_clock' and (key != 'rotation' or screen.get('board') == 'guition')]
+        keys = [key for key in SETTING_RULES if key != 'show_clock' and (key != 'rotation' or screen.get('board') in ('guition', 'jc8012p4a1'))]
         entities = self.setting_entities(screen)
         if entities is None:
             try:
@@ -744,7 +744,7 @@ class Manager:
                 if dim not in changes:
                     wanted[dim] = min(wanted.get(dim, SETTING_RULES[dim][0]), changes['brightness'])
         merged = validate_settings(wanted)
-        if merged['rotation'] and screen.get('board') != 'guition':
+        if merged['rotation'] and screen.get('board') not in ('guition', 'jc8012p4a1'):
             raise ValueError('Rotation requires a Guition with firmware 0.2.9 or newer.')
         if view['owner'] == 'layout':
             self.store_settings(inbox, merged, screen)
@@ -929,7 +929,7 @@ class Manager:
             layout['settings']['swipe_pages']=self.layouts.get(inbox,{}).get('settings',{}).get('swipe_pages',False)
         if 'settings' in layout and 'rotation' not in data.get('settings',{}):
             layout['settings']['rotation']=self.layouts.get(inbox,{}).get('settings',{}).get('rotation',0)
-        if layout.get('settings',{}).get('rotation',0) and screen.get('board')!='guition':
+        if layout.get('settings',{}).get('rotation',0) and screen.get('board') not in ('guition', 'jc8012p4a1'):
             raise ValueError('Rotation requires a Guition with firmware 0.2.9 or newer.')
         old_tiles = {t['entity']:t for t in self.layouts.get(inbox,{}).get('tiles',[])}
         for tile in layout['tiles']:
@@ -1080,7 +1080,7 @@ class Manager:
             message['swipe_pages'] = layout['settings'].get('swipe_pages',False)
             message['auto_home'] = layout['settings'].get('auto_home',True)
             message['auto_home_seconds'] = layout['settings'].get('auto_home_seconds',120)
-            if screen.get('board')=='guition':
+            if screen.get('board') in ('guition', 'jc8012p4a1'):
                 message['rotation'] = layout['settings'].get('rotation',0)
         # The revision the screen echoes on every ping (firmware 0.2.33+; older firmware ignores it).
         message['rev'] = revision(message)

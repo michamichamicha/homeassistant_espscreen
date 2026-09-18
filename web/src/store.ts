@@ -64,7 +64,7 @@ export const currentScreen = computed<Screen | undefined>(() => state.inventory.
 export const firmwareOf = computed(() => currentScreen.value?.firmware || "");
 export const supports = (major: number, minor: number, patch: number) => supportsVersion(firmwareOf.value, major, minor, patch);
 export const tileLimit = computed(() => limitFor(firmwareOf.value));
-export const isGuition = computed(() => currentScreen.value?.board === "guition");
+export const isGuition = computed(() => ["guition", "jc8012p4a1"].includes(currentScreen.value?.board || ""));
 export const barMetrics = computed(() => BAR_METRICS[isGuition.value ? "guition" : "cyd"]);
 export const currentTile = computed<Tile | undefined>(() =>
   state.selectedTile && state.layout ? state.layout.tiles.find((t) => t.entity === state.selectedTile) : undefined);
