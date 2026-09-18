@@ -19,6 +19,9 @@
 
 substitutions:
   SCREEN_FIRMWARE_VERSION: "0.2.63"
+  GRID_COLUMNS: "2"
+  GRID_ROWS: "3"
+  GRID_MAX_PAGES: "8"
   # A tap survives a finger that drifts up to this far (320 px over 58 mm: 1 cm); further is a swipe.
   TOUCH_MOVE_LIMIT_PX: "56"
   # Shortest contact that counts as a tap; a resistive panel bounces, a capacitive one does not.
@@ -237,6 +240,9 @@ esphome:
   platformio_options:
     build_flags:
       - -DLV_USE_SWITCH=1
+      - -DGRID_COLUMNS=${GRID_COLUMNS}
+      - -DGRID_ROWS=${GRID_ROWS}
+      - -DGRID_MAX_PAGES=${GRID_MAX_PAGES}
   includes:
     - <esphome/components/smart_display/cyd_ui.h>
     - <esphome/components/smart_display/light_controls.h>

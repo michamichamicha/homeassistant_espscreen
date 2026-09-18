@@ -5,9 +5,19 @@
 // Empty cells are allowed and stay exactly where they are.
 import type { Inventory, Layout, Tile } from "../types";
 
-export const SLOTS_PER_PAGE = 6;
-export const MAX_PAGES = 8;
-export const MAX_SLOTS = MAX_PAGES * SLOTS_PER_PAGE;
+export type GridProfile = { columns: number; rows: number; pages?: number };
+export const DEFAULT_GRID: GridProfile = { columns: 2, rows: 3, pages: 8 };
+export let GRID_COLUMNS = DEFAULT_GRID.columns;
+export let GRID_ROWS = DEFAULT_GRID.rows;
+export let SLOTS_PER_PAGE = GRID_COLUMNS * GRID_ROWS;
+export let MAX_PAGES = DEFAULT_GRID.pages!;
+export let MAX_SLOTS = MAX_PAGES * SLOTS_PER_PAGE;
+export function setGridProfile(profile?: Partial<GridProfile>) {
+  const columns = Number.isInteger(profile?.columns) && profile!.columns! > 0 ? profile!.columns! : DEFAULT_GRID.columns;
+  const rows = Number.isInteger(profile?.rows) && profile!.rows! > 0 ? profile!.rows! : DEFAULT_GRID.rows;
+  const pages = Number.isInteger(profile?.pages) && profile!.pages! > 0 ? profile!.pages! : DEFAULT_GRID.pages!;
+  GRID_COLUMNS = columns; GRID_ROWS = rows; SLOTS_PER_PAGE = columns * rows; MAX_PAGES = pages; MAX_SLOTS = pages * SLOTS_PER_PAGE;
+}
 
 export type Entry = { tile: Tile; slot: number };
 // A tile is single, wide (a row) or full (the whole page); `true` still means wide.
@@ -22,7 +32,7 @@ export const sizeOf = (tile: Tile): Size => (SIZES.includes(tile.options?.size a
 export const isWide = (tile: Tile) => sizeOf(tile) !== "single";
 export const isFull = (tile: Tile) => sizeOf(tile) === "full";
 export const pageStart = (slot: number) => slot - (slot % SLOTS_PER_PAGE);
-export const rowStart = (slot: number) => slot - (slot % 2);
+export const rowStart = (slot: number) => slot - (slot % GRID_COLUMNS);
 export const pageOf = (slot: number) => Math.floor(slot / SLOTS_PER_PAGE);
 export const spanOf = (size: SizeLike) => (asSize(size) === "full" ? SLOTS_PER_PAGE : asSize(size) === "wide" ? 2 : 1);
 export const cellsOf = (slot: number, size: SizeLike) =>
@@ -37,7 +47,7 @@ export function packSlots(tiles: Tile[]) {
   return tiles.map((tile) => {
     const size = sizeOf(tile);
     if (size === "full" && position % SLOTS_PER_PAGE) position += SLOTS_PER_PAGE - (position % SLOTS_PER_PAGE);
-    else if (size === "wide" && position % 2 === 1) position++;
+    else if (size === "wide" && position % GRID_COLUMNS !== 0) position += GRID_COLUMNS - (position % GRID_COLUMNS);
     const slot = position;
     position += spanOf(size);
     return slot;
@@ -62,7 +72,7 @@ export function occupied(entries: Entry[]) {
 }
 export const fits = (taken: Set<number>, slot: number, size: SizeLike) =>
   Number.isInteger(slot) && slot >= 0 && slot < MAX_SLOTS &&
-  (asSize(size) === "full" ? slot % SLOTS_PER_PAGE === 0 : asSize(size) === "wide" ? slot + 1 < MAX_SLOTS && !(slot % 2) : true) &&
+  (asSize(size) === "full" ? slot % SLOTS_PER_PAGE === 0 : asSize(size) === "wide" ? slot + 1 < MAX_SLOTS && slot % GRID_COLUMNS === 0 : true) &&
   cellsOf(slot, size).every((c) => !taken.has(c));
 export function firstFree(taken: Set<number>, size: SizeLike, from = 0) {
   for (let slot = from; slot < MAX_SLOTS; slot++) if (fits(taken, slot, size)) return slot;
@@ -141,9 +151,9 @@ export const supportsFirmware = (firmware: string | undefined, major: number, mi
   versionAtLeast(firmware, `${major}.${minor}.${patch}`);
 // Firmware 0.2.62 holds one tile per slot (48); 0.2.7 twenty; older firmware ten.
 export const MAX_TILES = MAX_SLOTS;
-export function tileLimit(firmware: string | undefined) {
+export function tileLimit(firmware: string | undefined, capacity = MAX_TILES) {
   if (parseVersion(firmware).length !== 3) return 10;
-  return versionAtLeast(firmware, "0.2.62") ? MAX_TILES : versionAtLeast(firmware, "0.2.7") ? 20 : 10;
+  return versionAtLeast(firmware, "0.2.62") ? capacity : versionAtLeast(firmware, "0.2.7") ? Math.min(20, capacity) : Math.min(10, capacity);
 }
 export const displayNames: Record<string, string> = {
   standard: "standard", watch: "large value", forecast: "weather forecast", graph: "graph",

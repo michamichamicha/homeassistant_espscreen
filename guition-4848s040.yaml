@@ -3,6 +3,9 @@
 # A screen gets its tiles from the ESP Screen Manager add-on while it runs. The CYD is its own profile.
 substitutions:
   SCREEN_FIRMWARE_VERSION: "0.2.63"
+  GRID_COLUMNS: "2"
+  GRID_ROWS: "3"
+  GRID_MAX_PAGES: "8"
   # 0: no drift limit; LVGL decides, releasing inside the tile is a tap, leaving it is not
   # (like iOS). The CYD keeps a limit because its resistive panel jumps.
   TOUCH_MOVE_LIMIT_PX: "0"
@@ -111,6 +114,9 @@ esphome:
     build_flags:
       - -DLV_USE_SNAPSHOT=1
       - -DLV_USE_SWITCH=1
+      - -DGRID_COLUMNS=${GRID_COLUMNS}
+      - -DGRID_ROWS=${GRID_ROWS}
+      - -DGRID_MAX_PAGES=${GRID_MAX_PAGES}
   includes:
     - <esphome/components/smart_display/cyd_ui.h>
     - <esphome/components/smart_display/light_controls.h>

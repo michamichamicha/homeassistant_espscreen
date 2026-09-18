@@ -66,12 +66,20 @@ DISPLAYS = {'weather': ('standard', 'watch', 'forecast'), 'sensor': ('standard',
 # Displays that only work on a double-width card.
 WIDE_ONLY = ('forecast', 'sunpath')
 
-# Grid positions: two columns, three rows per page, at most eight pages. A tile's
-# `slot` is its absolute cell (page * 6 + row * 2 + column); a wide tile starts in
-# the left column and also covers the cell to its right. Empty cells are allowed.
+# Grid profiles are selected from the screen's board. The default remains the
+# original CYD/Guition geometry; larger boards can opt into the same protocol.
+GRID_PROFILES = {
+    'cyd': {'columns': 2, 'rows': 3, 'pages': 8},
+    'guition': {'columns': 2, 'rows': 3, 'pages': 8},
+    'jc8012p4a1': {'columns': 4, 'rows': 4, 'pages': 8},
+}
 SLOTS_PER_PAGE = 6
 MAX_PAGES = 8
 MAX_SLOTS = MAX_PAGES * SLOTS_PER_PAGE
+
+def grid_profile(board=None):
+    profile = GRID_PROFILES.get(board, GRID_PROFILES['cyd'])
+    return dict(profile)
 
 TILE_SIZES_ON_SCREEN = ('single', 'wide', 'full')
 
@@ -87,31 +95,36 @@ def is_wide(tile):
 def is_full(tile):
     return tile_size(tile) == 'full'
 
-def cells_of(size):
-    return SLOTS_PER_PAGE if size == 'full' else 2 if size in ('wide', True) else 1
+def cells_of(size, grid=None):
+    grid = grid or grid_profile()
+    return grid['columns'] * grid['rows'] if size == 'full' else 2 if size in ('wide', True) else 1
 
-def page_start(slot):
-    return slot - slot % SLOTS_PER_PAGE
+def page_start(slot, grid=None):
+    grid = grid or grid_profile()
+    slots = grid['columns'] * grid['rows']
+    return slot - slot % slots
 
-def footprint(slot, size):
+def footprint(slot, size, grid=None):
     """The cells a tile of `size` takes from `slot` (True still means wide)."""
     if size == 'full':
-        return tuple(range(page_start(slot), page_start(slot) + SLOTS_PER_PAGE))
+        return tuple(range(page_start(slot, grid), page_start(slot, grid) + cells_of(size, grid)))
     return (slot, slot + 1) if size in ('wide', True) else (slot,)
 
-def pack_slots(tiles):
+def pack_slots(tiles, grid=None):
     """In-order packing, the rule before explicit positions and what firmware without
     `slots` still does: fill left to right, a wide card starts a new row, a full one a new page."""
-    position, slots = 0, []
+    position, result = 0, []
     for tile in tiles:
         size = tile_size(tile)
-        if size == 'full' and position % SLOTS_PER_PAGE:
-            position += SLOTS_PER_PAGE - position % SLOTS_PER_PAGE
-        elif size == 'wide' and position % 2:
-            position += 1
-        slots.append(position)
-        position += cells_of(size)
-    return slots
+        grid = grid or grid_profile()
+        page_slots = grid['columns'] * grid['rows']
+        if size == 'full' and position % page_slots:
+            position += page_slots - position % page_slots
+        elif size == 'wide' and position % grid['columns']:
+            position += grid['columns'] - position % grid['columns']
+        result.append(position)
+        position += cells_of(size, grid)
+    return result
 
 def has_gaps(tiles):
     """True when the stored positions differ from the in-order packing, so firmware
@@ -702,7 +715,7 @@ def validate_tap_action(value):
         raise ValueError('The values of the action are too long for the screen.')
     return clean
 
-def validate_layout(data, stored=False):
+def validate_layout(data, stored=False, grid=None):
     """A layout as the editor, a tile event or the storage gives it. `stored`: loaded from the app's own data, where a
     tile setting this version doesn't know (saved by a newer app) stays as it is instead of stopping the app."""
     if not isinstance(data, dict):
@@ -710,8 +723,11 @@ def validate_layout(data, stored=False):
     title, tiles = data.get('title'), data.get('tiles')
     if not isinstance(title, str) or not title.strip() or len(title.encode()) > 96:
         raise ValueError('Give the screen a title of at most 96 bytes.')
-    if not isinstance(tiles, list) or len(tiles) > MAX_TILES:
-        raise ValueError(f'Choose at most {MAX_TILES} tiles.')
+    grid = grid or grid_profile()
+    slots_per_page = grid['columns'] * grid['rows']
+    max_slots = grid['pages'] * slots_per_page
+    if not isinstance(tiles, list) or len(tiles) > max_slots:
+        raise ValueError(f'Choose at most {max_slots} tiles.')
     clean, seen = [], set()
     for tile in tiles:
         if not isinstance(tile, dict) or not entity_id(tile.get('entity')):
@@ -781,27 +797,27 @@ def validate_layout(data, stored=False):
     if any(slot is not None for slot in given):
         occupied = set()
         for item, slot in zip(clean, given):
-            if type(slot) is not int or not 0 <= slot < MAX_SLOTS:
+            if type(slot) is not int or not 0 <= slot < max_slots:
                 raise ValueError('Invalid tile position; refresh the management page.')
             size = tile_size(item)
-            if size == 'full' and slot % SLOTS_PER_PAGE:
+            if size == 'full' and slot % slots_per_page:
                 raise ValueError('A full-page tile starts at the top of its page.')
-            if size == 'wide' and slot % 2:
+            if size == 'wide' and slot % grid['columns']:
                 raise ValueError('A double-width tile starts in the left column.')
-            for cell in footprint(slot, size):
+            for cell in footprint(slot, size, grid):
                 if cell in occupied:
                     raise ValueError('Two tiles are in the same spot.')
                 occupied.add(cell)
             item['slot'] = slot
         clean.sort(key=lambda item: item['slot'])
     else:
-        for item, slot in zip(clean, pack_slots(clean)):
+        for item, slot in zip(clean, pack_slots(clean, grid)):
             item['slot'] = slot
     result = {'title': title.strip(), 'tiles': clean}
     # Pages kept on purpose, empty ones included; the screen shows at least what the tiles need.
     if 'pages' in data:
-        if type(data['pages']) is not int or not 1 <= data['pages'] <= MAX_PAGES:
-            raise ValueError(f'A screen has 1 to {MAX_PAGES} pages.')
+        if type(data['pages']) is not int or not 1 <= data['pages'] <= grid['pages']:
+            raise ValueError(f"A screen has 1 to {grid['pages']} pages.")
         result['pages'] = data['pages']
     if 'settings' in data:
         result['settings'] = validate_settings(data['settings'])
@@ -1327,6 +1343,7 @@ def discover_screens(registry, states, devices, areas):
                         'device_id': item.get('device_id'),
                         'firmware': versions.get(item.get('device_id'), 'unknown'),
                         'board': boards.get(item.get('device_id'), 'unknown'),
+                        'grid': grid_profile(boards.get(item.get('device_id'))),
                         'node': nodes.get(item.get('device_id')), 'ip': addresses.get(item.get('device_id')),
                         'device': device.get('name') or '',
                         'area': area, 'online': state.get('state') not in (None, 'unknown', 'unavailable'),

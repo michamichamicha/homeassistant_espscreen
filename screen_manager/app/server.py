@@ -17,7 +17,7 @@ import tile_icons
 from updates import Updater
 
 from aiohttp import ClientError, ClientSession, ClientTimeout, WSMsgType, web
-from core import BROADCAST_EVENTS, BROADCAST_SHOW, BUILTIN, CAMERA_DOMAINS, entity_id, SETTINGS_BESIDE_BLOCK, TILE_EVENTS, TILE_RESULT_EVENT, apply_tile_event, layout_snapshot, match_screen, HEADER_MIN_FIRMWARE, NAME_TILE_SETTINGS, TILE_BACKGROUNDS, TRANSPORT_MIN_FIRMWARE, alert_camera, alert_data, alert_reference, alert_service, alert_targets, controls_catalogue, device_prefixes, discover, discover_screens, encode, extras, forecast_kinds, header_items, inbox_prefix, message_action, min_firmware, pack_slots, packets, revision, screen_items, state_message, validate_header, validate_layout, validate_settings
+from core import BROADCAST_EVENTS, BROADCAST_SHOW, BUILTIN, CAMERA_DOMAINS, entity_id, SETTINGS_BESIDE_BLOCK, TILE_EVENTS, TILE_RESULT_EVENT, apply_tile_event, grid_profile, layout_snapshot, match_screen, HEADER_MIN_FIRMWARE, NAME_TILE_SETTINGS, TILE_BACKGROUNDS, TRANSPORT_MIN_FIRMWARE, alert_camera, alert_data, alert_reference, alert_service, alert_targets, controls_catalogue, device_prefixes, discover, discover_screens, encode, extras, forecast_kinds, header_items, inbox_prefix, message_action, min_firmware, pack_slots, packets, revision, screen_items, state_message, validate_header, validate_layout, validate_settings
 from core import SETTING_ENTITIES, SETTING_RULES, setting_action, setting_entities, setting_from_state, state_word
 import header_bar
 import history_card
@@ -688,7 +688,8 @@ class Manager:
         without sending it back, which could undo a change it made after reporting this one; its revision
         stays, so the next ping still matches."""
         base = self.layouts.get(inbox) or {'title': (screen or {}).get('name') or 'Home', 'tiles': []}
-        layout = validate_layout({**base, 'settings': settings})
+        layout = validate_layout({**base, 'settings': settings},
+                                 grid=grid_profile((screen or self.screen(inbox) or {}).get('board')))
         updated = {**self.layouts, inbox: layout}
         self.write_layouts(updated)
         self.layouts = updated
@@ -905,7 +906,7 @@ class Manager:
         screen=next((s for s in screens if s['id']==inbox), None)
         if screen is None:
             raise ValueError("This isn't a paired ESP screen. Refresh the overview.")
-        layout = validate_layout(data)
+        layout = validate_layout(data, grid=grid_profile(screen.get('board')))
         # A CYD has no memory for camera images, whatever its firmware; say so before asking for an update.
         if any(t['entity'].split('.')[0] in CAMERA_DOMAINS for t in layout['tiles']) and screen.get('board') not in camera_feed.BOXES:
             raise ValueError('Camera images need a Guition screen.')
@@ -942,9 +943,9 @@ class Manager:
         # Restored options can widen a tile: an editor without positions packs again with
         # the real widths, and explicit positions are checked once more for overlap.
         if not any(isinstance(t, dict) and 'slot' in t for t in data.get('tiles', [])):
-            for tile, slot in zip(layout['tiles'], pack_slots(layout['tiles'])):
+            for tile, slot in zip(layout['tiles'], pack_slots(layout['tiles'], grid_profile(screen.get('board')))):
                 tile['slot'] = slot
-        layout = validate_layout(layout)
+        layout = validate_layout(layout, grid=grid_profile(screen.get('board')))
         known = {e['id'] for e in entities} | set(BUILTIN)
         if any(t['entity'] not in known for t in layout['tiles']):
             raise ValueError('A chosen entity no longer exists. Look up the new entity.')

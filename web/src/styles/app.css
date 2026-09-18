@@ -139,7 +139,7 @@ a:hover { text-decoration: underline; }
 .bar-wrap:hover { background: #dedede; }
 .bar-wrap.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
 .bar-wrap svg { display: block; width: 100%; height: auto; }
-.tiles { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(0, 1fr); gap: 8px; min-height: 0; }
+.tiles { display: grid; grid-template-columns: repeat(var(--grid-columns, 2), 1fr); grid-template-rows: repeat(var(--grid-rows, 3), minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 8px; min-height: 0; }
 .tile { position: relative; background: #fff; border: 1px solid #dcdcdc; border-radius: 12px; padding: 8px 9px; display: flex; flex-direction: column; justify-content: space-between; gap: 4px; min-height: 0; cursor: pointer; text-align: left; overflow: hidden; color: #1b1b1b; touch-action: pan-y; }
 .tile:hover { border-color: #b9c4d3; }
 .tile.chosen { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -481,8 +481,8 @@ td code { white-space: nowrap; }
 .try-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .try-grid .field.wide { grid-column: 1 / -1; }
 
-/* A full-page tile (firmware 0.2.62+): both columns and all three rows, one big button. */
-.tile.full { grid-column: span 2; grid-row: span 3; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+/* A full-page tile (firmware 0.2.62+): every column and row, one big button. */
+.tile.full { grid-column: 1 / -1; grid-row: 1 / -1; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
 .tile.full .ic { font-size: 34px; }
 .tile.full .lead { flex: 0 0 auto; align-content: center; justify-items: center; }
 .tile.full .nm { font-size: 14px; }

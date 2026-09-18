@@ -4,7 +4,7 @@ import { computed, reactive } from "vue";
 import { api, getJson, send, setCsrf } from "./api";
 import {
   arrange, cellsOf, entriesOf, firstFree, fits, isFull, isWide, MAX_PAGES, nearestFree, newTile, normalize, occupied, pageCount, pageOf,
-  pageTarget, rowStart, sizeOf, SLOTS_PER_PAGE, supportsFirmware as supportsVersion, tileLimit as limitFor,
+  pageTarget, rowStart, setGridProfile, sizeOf, SLOTS_PER_PAGE, supportsFirmware as supportsVersion, tileLimit as limitFor,
 } from "./model/layout";
 import { agoText, BAR_METRICS, clockText, dateText, itemKey, type ItemView, whenBarFontsLoad } from "./model/topbar";
 import { versionAtLeast } from "./model/layout";
@@ -208,6 +208,7 @@ export function select(id: string | null) {
   state.menuOpen = false;
   const screen = state.inventory.screens.find((s) => s.id === id);
   if (!screen) { state.layout = null; return; }
+  setGridProfile(screen.grid);
   // A plain copy: the inventory is reactive, and structuredClone refuses a proxy.
   const layout: Layout = JSON.parse(JSON.stringify(screen.layout));
   normalize(layout);

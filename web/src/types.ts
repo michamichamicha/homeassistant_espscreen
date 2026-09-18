@@ -27,6 +27,7 @@ export type UpdateInfo = {
 export type SettingsView = { owner: string; keys: string[]; values: Record<string, any>; unavailable: string[] };
 export type Screen = {
   id: string; name: string; online: boolean; area?: string; firmware?: string; board?: string;
+  grid?: { columns: number; rows: number; pages?: number };
   layout: Layout; update?: UpdateInfo; settings?: SettingsView; delivery?: string; status?: string;
   alert_action?: string; dismiss_action?: string;
 };
