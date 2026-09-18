@@ -197,7 +197,7 @@ struct Widgets {
   lv_obj_t *veil{};
 };
 constexpr unsigned POINT_BUFFER = 128;
-inline std::array<Widgets, 10> widgets;
+inline std::array<Widgets, MAX_TILES> widgets;
 // All icon fonts carry the same generated glyph set, so the first bound one answers for all.
 inline bool has_icon_glyph(uint32_t codepoint) {
   for (auto &w : widgets) if (w.icon_font) { lv_font_glyph_dsc_t dsc; return lv_font_get_glyph_dsc(w.icon_font, &dsc, codepoint, 0); }
@@ -3105,9 +3105,9 @@ inline bool check_tile_geometry() {
       fits=lv_obj_get_width(w.tile)==expected;
       if(!fits)ESP_LOGE("ui_test","Wide width FAIL slot=%u width=%d expected=%d",(unsigned)w.index,lv_obj_get_width(w.tile),expected);
     }
-    if(w.full && widgets[4].tile){
+    if(w.full && widgets[GRID_COLS].tile){
       // A full card ends exactly where the third row ends.
-      int expected=lv_obj_get_y(widgets[4].tile)-lv_obj_get_y(widgets[0].tile)+w.base_height;
+      int expected=lv_obj_get_y(widgets[GRID_COLS].tile)-lv_obj_get_y(widgets[0].tile)+w.base_height;
       if(lv_obj_get_height(w.tile)!=expected){fits=false;ESP_LOGE("ui_test","Full height FAIL slot=%u height=%d expected=%d",(unsigned)w.index,lv_obj_get_height(w.tile),expected);}
     }
     if(!custom && w.full){
@@ -3212,7 +3212,7 @@ inline int place_page(int page) {
   page=std::clamp(page,0,pages-1);
   int wide_width=widgets[0].tile && widgets[1].tile ? lv_obj_get_x(widgets[1].tile)-lv_obj_get_x(widgets[0].tile)+widgets[0].base_width : 2*widgets[0].base_width;
   // A full card (firmware 0.2.62+) reaches from the first row to the end of the third.
-  int full_height=widgets[0].tile && widgets[4].tile ? lv_obj_get_y(widgets[4].tile)-lv_obj_get_y(widgets[0].tile)+widgets[0].base_height : 3*widgets[0].base_height;
+  int full_height=widgets[0].tile && widgets[GRID_COLS].tile ? lv_obj_get_y(widgets[GRID_COLS].tile)-lv_obj_get_y(widgets[0].tile)+widgets[0].base_height : GRID_ROWS*widgets[0].base_height;
   for(size_t slot=0;slot<widgets.size();++slot){widgets[slot].index=MAX_TILES;widgets[slot].wide=false;widgets[slot].full=false;widgets[slot].cached_active=-1;}
   for(size_t i=0;i<model.count;++i)if(placement[i].page==page){auto &w=widgets[placement[i].slot];w.index=i;w.wide=model.tiles[i].wide;w.full=model.tiles[i].full;}
   for(size_t slot=0;slot<widgets.size();++slot){

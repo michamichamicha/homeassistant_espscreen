@@ -19,10 +19,20 @@
 #endif
 
 namespace runtime_tiles {
-// Eight pages of six slots: a screen holds at most one tile per slot (firmware 0.2.62+; twenty before).
-constexpr size_t SLOTS_PER_PAGE = 6;
-// Explicit grid positions (0.2.26+) address at most eight pages of six slots.
-constexpr size_t MAX_PAGES = 8;
+#ifndef GRID_COLUMNS
+#define GRID_COLUMNS 2
+#endif
+#ifndef GRID_ROWS
+#define GRID_ROWS 3
+#endif
+#ifndef GRID_MAX_PAGES
+#define GRID_MAX_PAGES 8
+#endif
+// The board profile supplies the geometry; the original boards default to two columns by three rows.
+constexpr size_t GRID_COLS = GRID_COLUMNS;
+constexpr size_t GRID_ROW_COUNT = GRID_ROWS;
+constexpr size_t SLOTS_PER_PAGE = GRID_COLS * GRID_ROW_COUNT;
+constexpr size_t MAX_PAGES = GRID_MAX_PAGES;
 constexpr size_t MAX_SLOTS = MAX_PAGES * SLOTS_PER_PAGE;
 constexpr size_t MAX_TILES = MAX_SLOTS;
 inline bool valid_entity(const std::string &entity) {
@@ -307,7 +317,7 @@ inline unsigned pack(const TileList &tiles, size_t count, std::array<Placement, 
   unsigned position = 0;
   for (size_t i = 0; i < count && i < MAX_TILES; ++i) {
     if (tiles[i].full && position % SLOTS_PER_PAGE) position += SLOTS_PER_PAGE - position % SLOTS_PER_PAGE;
-    else if (tiles[i].wide && position % 2 == 1) ++position;
+    else if (tiles[i].wide && position % GRID_COLS != 0) position += GRID_COLS - position % GRID_COLS;
     out[i] = {static_cast<uint8_t>(position / SLOTS_PER_PAGE), static_cast<uint8_t>(position % SLOTS_PER_PAGE)};
     position += tiles[i].cells();
   }
@@ -385,7 +395,7 @@ inline unsigned place(const Model &m, std::array<Placement, MAX_TILES> &out) {
   for (size_t i = 0; i < m.count && i < MAX_TILES; ++i) {
     unsigned slot = m.slots[i];
     if (m.tiles[i].full) slot -= slot % SLOTS_PER_PAGE;
-    else if (m.tiles[i].wide) slot &= ~1u;
+    else if (m.tiles[i].wide) slot -= slot % GRID_COLS;
     out[i] = {static_cast<uint8_t>(slot / SLOTS_PER_PAGE), static_cast<uint8_t>(slot % SLOTS_PER_PAGE)};
     last = std::max(last, slot + m.tiles[i].cells());
   }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// One page of the screen as the mockup draws it: the top bar and a 2 × 3 grid of cells.
+// One page of the screen as the mockup draws it: the top bar and the selected screen's grid.
 import { computed } from "vue";
-import { cellsOf, pageOf, sizeOf, SLOTS_PER_PAGE, spanOf } from "../model/layout";
+import { cellsOf, GRID_COLUMNS, GRID_ROWS, pageOf, sizeOf, SLOTS_PER_PAGE, spanOf } from "../model/layout";
 import { isGuition, openBar, removePage, state } from "../store";
 import type { Tile } from "../types";
 import TileCard from "./TileCard.vue";
@@ -33,7 +33,7 @@ function pickCell(slot: number) {
         @click="openBar(0)" @keydown.enter.prevent="openBar(0)">
         <TopbarSvg />
       </div>
-      <div class="tiles">
+      <div class="tiles" :style="{ '--grid-columns': GRID_COLUMNS, '--grid-rows': GRID_ROWS }">
         <template v-for="slot in cells" :key="slot">
           <TileCard v-if="bySlot.get(slot)" :tile="bySlot.get(slot)!.tile" :slot="slot" :placeholder="bySlot.get(slot)!.tile === moving" />
           <button v-else type="button" class="cell" :class="{ 'insert-here': state.insertAt === slot }" :data-slot="slot"
